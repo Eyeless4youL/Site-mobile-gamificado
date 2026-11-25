@@ -1,0 +1,318 @@
+/* ---------------------------------------------------------
+   Lagoa Koi — tokens
+   A quiet Japanese-garden pond at dusk. Koi gold against
+   deep teal water; brush serif for voice, rounded sans for
+   interface. No neon, no cards, no drop shadows.
+--------------------------------------------------------- */
+:root {
+  --pond-deep:    #0B2E33;
+  --pond-mid:     #123F44;
+  --pond-surface: #1F6E68;
+  --koi-gold:     #E8A33D;
+  --koi-gold-dim: #C9852A;
+  --koi-cream:    #F6EFE1;
+  --lily-green:   #3B6B4E;
+  --stone:        #6C6355;
+  --lotus-pink:   #E893A3;
+  --pearl:        #FDF6E8;
+
+  --font-display: "Shippori Mincho", serif;
+  --font-body: "Zen Maru Gothic", sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overscroll-behavior: none;
+}
+
+body {
+  background: radial-gradient(120% 120% at 50% 0%, var(--pond-mid) 0%, var(--pond-deep) 65%);
+  color: var(--koi-cream);
+  font-family: var(--font-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+#game-shell {
+  position: relative;
+  width: min(96vw, 900px);
+  aspect-ratio: 16 / 10;
+  max-height: 94vh;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(246, 239, 225, 0.08),
+              0 30px 80px -20px rgba(0, 0, 0, 0.65);
+  touch-action: none;
+  user-select: none;
+}
+
+canvas#pond {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------------------------------------------------------
+   HUD
+--------------------------------------------------------- */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  --pad: clamp(12px, 2.5vw, 26px);
+  padding: calc(var(--pad) + env(safe-area-inset-top, 0px))
+           calc(var(--pad) + env(safe-area-inset-right, 0px))
+           var(--pad)
+           calc(var(--pad) + env(safe-area-inset-left, 0px));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+#hud.hidden { display: none; }
+
+.hud-score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: rgba(11, 46, 51, 0.55);
+  padding: 6px 16px;
+  border-radius: 999px 999px 999px 4px;
+}
+
+.hud-score #score-value {
+  font-family: var(--font-body);
+  font-weight: 900;
+  font-size: clamp(20px, 3.2vw, 30px);
+  color: var(--koi-cream);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-label {
+  font-size: clamp(11px, 1.6vw, 13px);
+  color: var(--koi-cream);
+  opacity: 0.7;
+}
+
+.bloom-btn {
+  pointer-events: auto;
+  position: relative;
+  width: clamp(44px, 7vw, 56px);
+  height: clamp(44px, 7vw, 56px);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.bloom-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+
+.bloom-ring-bg {
+  fill: rgba(11, 46, 51, 0.45);
+  stroke: rgba(246, 239, 225, 0.18);
+  stroke-width: 2;
+}
+
+.bloom-ring-fill {
+  fill: none;
+  stroke: var(--lotus-pink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 106.8;
+  stroke-dashoffset: 106.8;
+  transition: stroke-dashoffset 0.15s linear;
+}
+
+.bloom-icon {
+  position: absolute;
+  font-size: clamp(16px, 2.6vw, 20px);
+  color: var(--koi-cream);
+  opacity: 0.45;
+  transition: opacity 0.2s, transform 0.2s, color 0.2s;
+}
+
+.bloom-btn:not(:disabled) .bloom-icon {
+  color: var(--lotus-pink);
+  opacity: 1;
+  animation: bloom-pulse 1.4s ease-in-out infinite;
+}
+
+.bloom-btn:disabled { cursor: default; }
+
+@keyframes bloom-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+}
+
+.combo-badge {
+  position: absolute;
+  top: calc(clamp(60px, 9vw, 74px) + env(safe-area-inset-top, 0px));
+  right: calc(clamp(14px, 3vw, 28px) + env(safe-area-inset-right, 0px));
+  background: rgba(232, 163, 61, 0.9);
+  color: var(--pond-deep);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  transform-origin: center;
+  animation: combo-pop 0.25s ease-out;
+}
+.combo-badge.hidden { display: none; }
+
+@keyframes combo-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ---------------------------------------------------------
+   Overlays (start / game over)
+--------------------------------------------------------- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8%;
+  background: linear-gradient(180deg, rgba(8, 34, 38, 0.62), rgba(8, 34, 38, 0.88));
+}
+
+.overlay.hidden { display: none; }
+
+.eyebrow {
+  font-family: var(--font-body);
+  font-size: clamp(12px, 1.8vw, 14px);
+  letter-spacing: 0.02em;
+  color: var(--lotus-pink);
+  margin: 0 0 6px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(40px, 9vw, 76px);
+  color: var(--koi-gold);
+  margin: 0;
+  line-height: 1.05;
+  text-shadow: 0 2px 24px rgba(232, 163, 61, 0.35);
+}
+
+.title.small {
+  font-size: clamp(28px, 6vw, 42px);
+  color: var(--koi-cream);
+}
+
+.subtitle {
+  font-size: clamp(14px, 2.2vw, 17px);
+  max-width: 34ch;
+  line-height: 1.6;
+  color: var(--koi-cream);
+  opacity: 0.88;
+  margin: 18px 0 30px;
+}
+
+.hint {
+  font-size: clamp(12px, 1.8vw, 13px);
+  color: var(--koi-cream);
+  opacity: 0.55;
+  max-width: 36ch;
+  line-height: 1.6;
+  margin-top: 26px;
+}
+
+.score-line {
+  font-size: clamp(16px, 2.6vw, 19px);
+  margin: 4px 0;
+}
+.score-line span { font-weight: 700; color: var(--koi-gold); font-variant-numeric: tabular-nums; }
+.score-line.muted { opacity: 0.65; }
+.score-line.muted span { color: var(--koi-cream); }
+
+.new-record {
+  color: var(--lotus-pink);
+  font-weight: 700;
+  margin: 10px 0 0;
+}
+.new-record.hidden { display: none; }
+
+/* Organic "stone ripple" button — deliberately not a rounded rectangle */
+.ripple-btn {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: clamp(16px, 2.6vw, 19px);
+  color: var(--pond-deep);
+  background: var(--koi-gold);
+  border: none;
+  padding: 16px 46px;
+  margin-top: 26px;
+  border-radius: 52% 48% 51% 49% / 58% 44% 56% 42%;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(232, 163, 61, 0.5);
+  transition: transform 0.18s ease, box-shadow 0.3s ease, border-radius 0.4s ease;
+}
+
+.ripple-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 10px 30px -6px rgba(232, 163, 61, 0.55);
+  border-radius: 46% 54% 45% 55% / 50% 55% 45% 50%;
+}
+
+.ripple-btn:active { transform: translateY(0) scale(0.98); }
+
+.ripple-btn:focus-visible,
+.bloom-btn:focus-visible {
+  outline: 2px solid var(--pearl);
+  outline-offset: 3px;
+}
+
+.hidden { display: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bloom-btn:not(:disabled) .bloom-icon { animation: none; }
+  .ripple-btn { transition: none; }
+}
+
+/* Celular e telas de toque: ocupa a tela inteira */
+@media (pointer: coarse), (max-width: 600px) {
+  #game-shell {
+    width: 100vw;
+    width: 100dvw;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+    aspect-ratio: auto;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .bloom-btn { width: 60px; height: 60px; }
+  .combo-badge { top: calc(78px + env(safe-area-inset-top, 0px)); }
+}
+
+/* Telas baixas, como o celular deitado */
+@media (max-height: 520px) {
+  .overlay { padding: 3% 6%; }
+  .eyebrow, .hint { display: none; }
+  .title { font-size: clamp(30px, 12vh, 54px); }
+  .title.small { font-size: clamp(24px, 9vh, 36px); }
+  .subtitle { margin: 8px 0 10px; font-size: 13px; line-height: 1.45; }
+  .ripple-btn { margin-top: 10px; padding: 10px 34px; font-size: 16px; }
+  .score-line { margin: 2px 0; font-size: 15px; }
+}
